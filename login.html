@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login • AInswer.co</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+  <script src="assets/app.js"></script>
+</head>
+
+<body>
+  <nav>
+    <div class="container nav-inner">
+      <a class="brand" href="index.html"><span class="logo"></span><span>AInswer.co</span></a>
+      <div class="nav-links">
+        <a href="pricing.html">Pricing</a>
+        <a href="demo.html">Demo</a>
+        <a class="btn ghost" href="login.html">Log in</a>
+        <a class="btn primary" href="register.html">Start free trial</a>
+      </div>
+    </div>
+  </nav>
+
+
+  <section class="section">
+    <div class="container">
+      <h1 class="h1" style="font-size:38px">Log in</h1>
+      <p class="sub">Demo credentials: <b>owner@demo.com / demo123</b> or <b>admin@ainswer.co / admin123</b></p>
+      <div class="divider"></div>
+      <div class="card padded">
+        <form class="form" id="loginForm">
+          <label>Email</label><input name="email" />
+          <label>Password</label><input name="password" required type="password" />
+          <button class="btn primary" type="submit">Log in</button>
+          <div class="small"><a href="register.html">Create an account</a> • <a href="forgot.html">Forgot password</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+  <script> AInswer.handleLogin("loginForm"); </script>
+
+</body>
+
+</html>

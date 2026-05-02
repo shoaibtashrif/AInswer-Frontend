@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Customer detail • AInswer.co Admin</title>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <script src="../assets/app.js"></script>
+</head>
+<body>
+<nav>
+  <div class="container nav-inner">
+    <a class="brand" href="index.html"><span class="logo"></span><span>AInswer.co Admin</span></a>
+    <div class="nav-links">
+      <span class="small" id="portalUser"></span>
+      <button class="btn danger" onclick="logout()">Log out</button>
+    </div>
+  </div>
+</nav>
+<section class="section">
+  <div class="container"><div id="custDetail"></div>
+<script>AInswer.renderAdminCustomerDetail("custDetail");</script></div>
+</section>
+<script>
+AInswer.requireAuth("admin");
+AInswer.setHeaderUser();
+</script>
+</body>
+</html>

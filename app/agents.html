@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Manage Agents • AInswer.co Portal</title>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <script src="../assets/app.js"></script>
+</head>
+<body>
+<nav>
+  <div class="container nav-inner">
+    <a class="brand" href="dashboard.html"><span class="logo"></span><span>AInswer.co Portal</span></a>
+    <div class="nav-links">
+      <span class="small" id="portalUser"></span>
+      <button class="btn danger" onclick="logout()">Log out</button>
+    </div>
+  </div>
+</nav>
+<section class="container">
+  <div class="layout">
+    
+<div class="sidebar card padded" style="box-shadow:none">
+  <a data-nav href="dashboard.html">Dashboard</a>
+  <a data-nav href="go-live.html">Go Live</a>
+  <a data-nav href="calls.html">Call Logs</a>
+  <a data-nav href="agents.html">Manage Agents</a>
+  <a data-nav href="settings.html">Settings</a>
+  <a data-nav href="knowledge.html">Knowledge Base</a>
+  <a data-nav href="billing.html">Billing</a>
+  <a data-nav href="integrations.html">Integrations</a>
+</div>
+    <div>
+<div id="agentsContent"></div>
+<script>AInswer.renderAgentsPage("agentsContent");</script>
+</div>
+  </div>
+</section>
+<script>
+AInswer.requireAuth();
+AInswer.setHeaderUser();
+AInswer.setActiveNav();
+</script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard • AInswer.co Portal</title>
+  <link rel="stylesheet" href="../assets/styles.css" />
+  <script src="../assets/app.js"></script>
+</head>
+
+<body>
+  <nav>
+    <div class="container nav-inner">
+      <a class="brand" href="dashboard.html"><span class="logo"></span><span>AInswer.co Portal</span></a>
+      <div class="nav-links">
+        <span class="small" id="portalUser"></span>
+        <button class="btn danger" onclick="logout()">Log out</button>
+      </div>
+    </div>
+  </nav>
+  <section class="container">
+    <div class="layout">
+
+      <div class="sidebar card padded" style="box-shadow:none">
+        <a data-nav href="dashboard.html">Dashboard</a>
+        <a data-nav href="go-live.html">Go Live</a>
+        <a data-nav href="calls.html">Call Logs</a>
+        <a data-nav href="agents.html">Manage Agents</a>
+  <a data-nav href="settings.html">Settings</a>
+        <a data-nav href="knowledge.html">Knowledge Base</a>
+        <a data-nav href="billing.html">Billing</a>
+        <a data-nav href="integrations.html">Integrations</a>
+      </div>
+      <div>
+        <div class="topbar">
+          <div>
+            <h1 class="h2" style="margin:0">Dashboard</h1>
+            <div class="p">Overview of calls and configuration.</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn primary" onclick="AInswer.simulateTestCall()">Run Test Call</button>
+            <a class="btn" href="calls.html">Call Logs</a>
+            <a class="btn" href="settings.html">Settings</a>
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="card padded">
+            <div class="badge">Agents</div>
+            <div class="h2" id="kpiAgents" style="margin:10px 0 0">—</div>
+            <div class="small">Total configured agents</div>
+          </div>
+          <div class="card padded">
+            <div class="badge warn">Calls</div>
+            <div class="h2" id="kpiCalls" style="margin:10px 0 0">—</div>
+            <div class="small">Total live calls handled</div>
+          </div>
+          <div class="card padded">
+            <div class="badge ok">Wallet</div>
+            <div class="h2" id="kpiBalance" style="margin:10px 0 0">—</div>
+            <div class="small">Available balance</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="divider"></div>
+
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="card padded" style="padding: 12px 18px;">
+            <h3 class="h3" style="font-size: 14px; margin-bottom: 5px;">Call Usage (Last 7 Days)</h3>
+            <div id="usageContainer" style="height: 300px; position: relative;">
+              <canvas id="usageChart"></canvas>
+              <div id="usageEmpty" class="notice" style="display:none; text-align:center; margin-top:30px;">No call data available.</div>
+            </div>
+          </div>
+          <div class="card padded" style="padding: 12px 18px;">
+            <h3 class="h3" style="font-size: 14px; margin-bottom: 5px;">Satisfaction Distribution</h3>
+            <div id="satisfactionContainer" style="height: 300px; position: relative;">
+              <canvas id="satisfactionChart"></canvas>
+              <div id="satisfactionEmpty" class="notice" style="display:none; text-align:center; margin-top:30px;">No ratings data yet.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="card padded">
+          <h3 class="h3">What happens after each call</h3>
+          <ul class="list" style="display: flex; gap: 20px; list-style: none; padding:0; flex-wrap: wrap; font-size: 13px;">
+            <li><span class="badge ok" style="padding: 2px 8px; margin-right: 5px;">1</span> AI provides summaries.</li>
+            <li><span class="badge ok" style="padding: 2px 8px; margin-right: 5px;">2</span> Notification sent.</li>
+            <li><span class="badge ok" style="padding: 2px 8px; margin-right: 5px;">3</span> Stored in Call Logs.</li>
+          </ul>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+          async function initDashboard() {
+            const u = AInswer.requireAuth();
+            AInswer.setHeaderUser();
+            AInswer.setActiveNav();
+
+            console.log("Fetching live dashboard data...");
+            const data = await AInswer.getDashboardData();
+            if (data) {
+              console.log("Dashboard data loaded:", data);
+              // Update KPIs
+              document.getElementById("kpiAgents").textContent = String(data.agent_count || 0);
+              document.getElementById("kpiCalls").textContent = String(data.live_calls || 0);
+              document.getElementById("kpiBalance").textContent = "£" + (data.balance || 0).toFixed(2);
+
+              // Usage Chart
+              if (data.usage_data && data.usage_data.length > 0) {
+                const labels = data.usage_data.map(d => d.day);
+                const values = data.usage_data.map(d => d.calls);
+
+                new Chart(document.getElementById('usageChart'), {
+                  type: 'line',
+                  data: {
+                    labels: labels,
+                    datasets: [{
+                      label: 'Calls',
+                      data: values,
+                      borderColor: '#635bff',
+                      backgroundColor: 'rgba(99, 91, 255, 0.1)',
+                      fill: true,
+                      tension: 0.4,
+                      pointRadius: 4,
+                      pointBackgroundColor: '#635bff'
+                    }]
+                  },
+                  options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                      x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                      y: { grid: { display: false }, ticks: { font: { size: 10 }, beginAtZero: true, stepSize: 1 } }
+                    }
+                  }
+                });
+              } else {
+                document.getElementById("usageChart").style.display = "none";
+                document.getElementById("usageEmpty").style.display = "block";
+              }
+
+              // Satisfaction Chart
+              if (data.satisfaction_dist) {
+                const dist = data.satisfaction_dist;
+                const labels = ['Successful', 'Unsuccessful', 'Neutral'];
+                const values = [dist.successful || 0, dist.unsuccessful || 0, dist.neutral || 0];
+
+                new Chart(document.getElementById('satisfactionChart'), {
+                  type: 'bar',
+                  data: {
+                    labels: labels,
+                    datasets: [{
+                      label: 'Calls',
+                      data: values,
+                      backgroundColor: ['#10b981', '#f43f5e', '#6366f1'],
+                      borderRadius: 6
+                    }]
+                  },
+                  options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                      x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                      y: { grid: { display: false }, ticks: { font: { size: 10 }, beginAtZero: true, stepSize: 1 } }
+                    }
+                  }
+                });
+              } else {
+                document.getElementById("satisfactionChart").style.display = "none";
+                document.getElementById("satisfactionEmpty").style.display = "block";
+              }
+            } else {
+              // Fallback
+              const cust = (LS.get("ainswer_customers", []) || []).find(c => c.id === u.customerId);
+              const calls = (LS.get("ainswer_calls", []) || []).filter(c => c.customerId === u.customerId);
+              document.getElementById("kpiAgents").textContent = "Core";
+              document.getElementById("kpiCalls").textContent = String(calls.length);
+              document.getElementById("kpiBalance").textContent = "£0.00";
+            }
+          }
+          initDashboard();
+        </script>
+      </div>
+    </div>
+  </section>
+</body>
+
+</html>

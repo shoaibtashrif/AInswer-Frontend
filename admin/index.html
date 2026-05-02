@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dashboard • AInswer.co Admin</title>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <script src="../assets/app.js"></script>
+</head>
+<body>
+<nav>
+  <div class="container nav-inner">
+    <a class="brand" href="index.html"><span class="logo"></span><span>AInswer.co Admin</span></a>
+    <div class="nav-links">
+      <span class="small" id="portalUser"></span>
+      <button class="btn danger" onclick="logout()">Log out</button>
+    </div>
+  </div>
+</nav>
+<section class="section">
+  <div class="container"><div class="topbar">
+  <div>
+    <h1 class="h2" style="margin:0">Site Admin Dashboard</h1>
+    <div class="p">View customers, usage, and operational health (demo view).</div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <a class="btn" href="customers.html">Customers</a>
+  </div>
+</div>
+<div id="counts"></div>
+<div class="divider"></div>
+<div class="card padded">
+  <h3 class="h3">Demo notes</h3>
+  <ul class="list">
+    <li>Admin can view and manage customers.</li>
+    <li>In production: search, impersonation, webhook health, billing status, audit logs.</li>
+  </ul>
+</div>
+<script>AInswer.renderAdminCounts("counts");</script></div>
+</section>
+<script>
+AInswer.requireAuth("admin");
+AInswer.setHeaderUser();
+</script>
+</body>
+</html>

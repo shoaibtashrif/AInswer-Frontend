@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Register • AInswer.co</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+  <script src="assets/app.js"></script>
+</head>
+<body>
+<nav>
+  <div class="container nav-inner">
+    <a class="brand" href="index.html"><span class="logo"></span><span>AInswer.co</span></a>
+    <div class="nav-links">
+      <a href="pricing.html">Pricing</a>
+      <a href="demo.html">Demo</a>
+      <a class="btn ghost" href="login.html">Log in</a>
+      <a class="btn primary" href="register.html">Start free trial</a>
+    </div>
+  </div>
+</nav>
+
+
+<section class="section">
+  <div class="container">
+    <h1 class="h1" style="font-size:38px">Create your account</h1>
+    <p class="sub">Fully functional registration in this demo (stored in LocalStorage).</p>
+    <div class="divider"></div>
+    <div class="card padded">
+      <form class="form" id="registerForm">
+        <div class="row">
+          <div><label>Your name</label><input name="name" required placeholder="Owner name"/></div>
+          <div><label>Business name</label><input name="businessName" required placeholder="e.g. ABC Plumbing"/></div>
+        </div>
+        <div class="row">
+          <div><label>Email</label><input name="email" required type="email" placeholder="you@company.com"/></div>
+          <div><label>Mobile (for SMS)</label><input name="phone" placeholder="+44..."/></div>
+        </div>
+        <div class="row">
+          <div><label>Industry</label>
+            <select name="industry">
+              <option>Trades</option><option>Clinic</option><option>Property</option><option>Garage</option><option>Transport</option><option selected>Other</option>
+            </select>
+          </div>
+          <div><label>Timezone</label><input name="timezone" value="Europe/London"/></div>
+        </div>
+        <div class="row">
+          <div><label>Password</label><input name="password" required type="password"/></div>
+          <div><label>Confirm</label><input required type="password" placeholder="(not validated in demo)"/></div>
+        </div>
+        <button class="btn primary" type="submit">Create account</button>
+        <div class="small">Already have an account? <a href="login.html">Log in</a></div>
+      </form>
+    </div>
+  </div>
+</section>
+<script> AInswer.handleRegister("registerForm"); </script>
+
+</body>
+</html>
