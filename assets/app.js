@@ -12,7 +12,7 @@ const LS = {
 const uid = (p = "id") => p + "_" + Math.random().toString(16).slice(2, 10) + "_" + Date.now().toString(36);
 const fmt = (dt) => new Date(dt).toLocaleString();
 // const API_BASE = "https://agent.cabex.co.uk/outbound";
-const API_BASE = "https://genbot.ainswer.co";
+const API_BASE = "https://genbot.ainswer.co/outbound";
 
 function copyToClipboard(text, btn) {
   navigator.clipboard.writeText(text).then(() => {
@@ -538,53 +538,68 @@ function simulateTestCall() {
   alert("Test call created. Check Call Logs.");
 }
 
-function renderSettings(formId) {
+async function renderSettings(formId) {
   const form = document.getElementById(formId); if (!form) return;
-  const u = requireAuth();
-  const cust = customerById(u.customerId); if (!cust) return;
+  requireAuth(); // Ensure logged in
+  
+  // fetch settings
+  const settings = await getSettings() || {};
+  
+  // populate form safely mapping to our inputs
+  const p = (name, val) => { if (form[name]) form[name].value = val || ""; };
+  const c = (name, val) => { if (form[name]) form[name].checked = !!val; };
 
-  // populate
-  form.businessName.value = cust.businessName || "";
-  form.industry.value = cust.industry || "Other";
-  form.mode.value = cust.mode || "overflow";
-  form.ringTimeout.value = String(cust.ringTimeout || 20);
-  form.timezone.value = cust.timezone || "Europe/London";
-  form.services.value = cust.services || "";
-  form.location.value = cust.location || "";
-  form.hours.value = cust.hours || "";
-  form.urgentKeywords.value = (cust.urgentKeywords || []).join(", ");
-  form.transferEnabled.checked = !!cust.transferEnabled;
-  form.transferNumber.value = cust.transferNumber || "";
-  form.smsEnabled.checked = !!cust.notifications?.sms; form.smsTo.value = cust.notifications?.smsTo || "";
-  form.emailEnabled.checked = !!cust.notifications?.email; form.emailTo.value = cust.notifications?.emailTo || "";
-  form.whatsappEnabled.checked = !!cust.notifications?.whatsapp; form.whatsappTo.value = cust.notifications?.whatsappTo || "";
-  form.tone.value = cust.fragments?.tone || "professional";
-  form.greeting.value = cust.fragments?.greeting || "";
-  form.alwaysAsk.value = (cust.fragments?.alwaysAsk || []).join(", ");
-  form.avoid.value = cust.fragments?.avoid || "";
-  form.capQuoting.checked = !!cust.capabilities?.quoting;
-  form.capBooking.checked = !!cust.capabilities?.booking;
-  form.capPayments.checked = !!cust.capabilities?.payments;
-  form.capDispatch.checked = !!cust.capabilities?.dispatch;
+  p('business_name', settings.business_name);
+  p('industry', settings.industry || "Other");
+  p('mode', settings.mode || "overflow");
+  p('ring_timeout', settings.ring_timeout || 20);
+  p('timezone', settings.timezone || "Europe/London");
+  p('services', settings.services);
+  p('location', settings.location);
+  p('hours', settings.hours);
+  
+  c('sms_notifications_enabled', settings.sms_notifications_enabled);
+  p('sms_to_number', settings.sms_to_number);
+  c('email_notifications_enabled', settings.email_notifications_enabled);
+  p('email_to_address', settings.email_to_address);
+  c('whatsapp_notifications_enabled', settings.whatsapp_notifications_enabled);
+  p('whatsapp_to_number', settings.whatsapp_to_number);
 
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    cust.businessName = form.businessName.value.trim();
-    cust.industry = form.industry.value;
-    cust.mode = form.mode.value;
-    cust.ringTimeout = parseInt(form.ringTimeout.value || "20", 10);
-    cust.timezone = form.timezone.value.trim();
-    cust.services = form.services.value.trim();
-    cust.location = form.location.value.trim();
-    cust.hours = form.hours.value.trim();
-    cust.urgentKeywords = form.urgentKeywords.value.split(",").map(s => s.trim()).filter(Boolean);
-    cust.transferEnabled = !!form.transferEnabled.checked;
-    cust.transferNumber = form.transferNumber.value.trim();
-    cust.notifications = { sms: !!form.smsEnabled.checked, smsTo: form.smsTo.value.trim(), email: !!form.emailEnabled.checked, emailTo: form.emailTo.value.trim(), whatsapp: !!form.whatsappEnabled.checked, whatsappTo: form.whatsappTo.value.trim() };
-    cust.fragments = { tone: form.tone.value, greeting: form.greeting.value.trim(), alwaysAsk: form.alwaysAsk.value.split(",").map(s => s.trim()).filter(Boolean), avoid: form.avoid.value.trim() };
-    cust.capabilities = { quoting: !!form.capQuoting.checked, booking: !!form.capBooking.checked, payments: !!form.capPayments.checked, dispatch: !!form.capDispatch.checked };
-    saveCustomer(cust);
-    alert("Saved (demo).");
+    
+    const payload = {
+      business_name: form.business_name?.value.trim() || null,
+      industry: form.industry?.value || "Other",
+      mode: form.mode?.value || "overflow",
+      ring_timeout: parseInt(form.ring_timeout?.value || "20", 10),
+      timezone: form.timezone?.value.trim() || null,
+      services: form.services?.value.trim() || null,
+      location: form.location?.value.trim() || null,
+      hours: form.hours?.value.trim() || null,
+      
+      sms_notifications_enabled: !!form.sms_notifications_enabled?.checked,
+      sms_to_number: form.sms_to_number?.value.trim() || null,
+      email_notifications_enabled: !!form.email_notifications_enabled?.checked,
+      email_to_address: form.email_to_address?.value.trim() || null,
+      whatsapp_notifications_enabled: !!form.whatsapp_notifications_enabled?.checked,
+      whatsapp_to_number: form.whatsapp_to_number?.value.trim() || null
+    };
+    
+    const btn = form.querySelector('button');
+    const ogText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+    
+    try {
+      await updateSettings(payload);
+      alert("Settings saved successfully.");
+    } catch(err) {
+      alert("Failed to save settings: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = ogText;
+    }
   });
 }
 
@@ -924,6 +939,46 @@ async function updateAgent(id, payload) {
   }
 }
 
+async function getSettings() {
+  const token = LS.get("ainswer_token");
+  if (!token) return null;
+  try {
+    const resp = await fetch(`${API_BASE}/api/settings`, {
+      headers: { "Authorization": `Bearer ${token}`, "accept": "application/json" }
+    });
+    if (!resp.ok) throw new Error("Settings fetch failed");
+    return await resp.json();
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
+}
+
+async function updateSettings(payload) {
+  const token = LS.get("ainswer_token");
+  if (!token) return null;
+  try {
+    const resp = await fetch(`${API_BASE}/api/settings`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "accept": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error("Update settings failed:", err);
+      throw new Error("Update settings failed: " + err);
+    }
+    return await resp.json();
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
+}
+
 async function startWebCall(agentId) {
   const token = LS.get("ainswer_token");
   if (!token) { alert("Please log in first."); return; }
@@ -1217,6 +1272,28 @@ async function renderCreateAgentForm(containerId) {
         <label style="margin-top:10px">System Prompt (The Agent's Persona & Knowledge)</label>
         <textarea name="system_prompt" placeholder="You are a helpful assistant..." required style="min-height:120px"></textarea>
         
+        <div class="divider"></div>
+        <h3 class="h3">Safe Customizations</h3>
+        <div class="p small" style="margin-bottom:10px">Configure specific agent behaviors without modifying the system prompt.</div>
+        <div class="grid-2">
+          <div>
+            <label>Tone</label>
+            <input type="text" name="tone" placeholder="e.g. professional, friendly" />
+          </div>
+          <div>
+            <label>Greeting</label>
+            <input type="text" name="greeting" placeholder="e.g. Thanks for calling us." />
+          </div>
+          <div>
+            <label>Always Ask</label>
+            <input type="text" name="always_ask" placeholder="e.g. postcode, preferred time" />
+          </div>
+          <div>
+            <label>Avoid Phrases</label>
+            <input type="text" name="avoid_phrases" placeholder="e.g. discounts, cheap" />
+          </div>
+        </div>
+        
         <div class="grid-3" style="margin-top:10px">
           <div>
             <label>Language Hint</label>
@@ -1236,6 +1313,18 @@ async function renderCreateAgentForm(containerId) {
             <label>Temperature (Creativity)</label>
             <input type="number" name="temperature" value="0.3" step="0.1" min="0" max="1" />
           </div>
+        </div>
+
+        <div class="divider"></div>
+        <h3 class="h3">Capabilities / Tools</h3>
+        <div class="p small" style="margin-bottom: 10px;">Select features to empower your agent.</div>
+        <div class="grid-2">
+          <label style="display:flex;gap:8px;align-items:center;">
+            <input type="checkbox" name="tools" value="coldTransfer"> Enable Cold Transfer
+          </label>
+          <label style="display:flex;gap:8px;align-items:center;">
+            <input type="checkbox" name="tools" value="warmTransfer"> Enable Warm Transfer
+          </label>
         </div>
 
         <div class="divider"></div>
@@ -1388,7 +1477,13 @@ async function renderCreateAgentForm(containerId) {
       payload.temperature = parseFloat(payload.temperature);
       payload.speed = parseFloat(payload.speed);
       payload.twilio_number_id = parseInt(payload.twilio_number_id) || 0;
-      payload.tool_names = []; // Empty for now as per schema
+      payload.tool_names = Array.from(form.querySelectorAll('input[name="tools"]:checked')).map(el => el.value);
+      
+      // Handle Safe Customization fields (convert empty to null)
+      ['tone', 'greeting', 'always_ask', 'avoid_phrases'].forEach(k => {
+        if (!payload[k] || payload[k].trim() === "") payload[k] = null;
+        else payload[k] = payload[k].trim();
+      });
 
       await createAgent(payload);
       alert("Agent created successfully!");
@@ -1450,6 +1545,28 @@ async function renderEditAgentForm(containerId, agentId) {
         <label style="margin-top:10px">System Prompt (The Agent's Persona & Knowledge)</label>
         <textarea name="system_prompt" required style="min-height:120px">${escapeHtml(safeSystemPrompt)}</textarea>
         
+        <div class="divider"></div>
+        <h3 class="h3">Safe Customizations</h3>
+        <div class="p small" style="margin-bottom:10px">Configure specific agent behaviors without modifying the system prompt.</div>
+        <div class="grid-2">
+          <div>
+            <label>Tone</label>
+            <input type="text" name="tone" value="${escapeHtml(agent.tone || '')}" placeholder="e.g. professional, friendly" />
+          </div>
+          <div>
+            <label>Greeting</label>
+            <input type="text" name="greeting" value="${escapeHtml(agent.greeting || '')}" placeholder="e.g. Thanks for calling us." />
+          </div>
+          <div>
+            <label>Always Ask</label>
+            <input type="text" name="always_ask" value="${escapeHtml(agent.always_ask || '')}" placeholder="e.g. postcode, preferred time" />
+          </div>
+          <div>
+            <label>Avoid Phrases</label>
+            <input type="text" name="avoid_phrases" value="${escapeHtml(agent.avoid_phrases || '')}" placeholder="e.g. discounts, cheap" />
+          </div>
+        </div>
+        
         <div class="grid-3" style="margin-top:10px">
           <div>
             <label>Language Hint</label>
@@ -1469,6 +1586,18 @@ async function renderEditAgentForm(containerId, agentId) {
             <label>Temperature (Creativity)</label>
             <input type="number" name="temperature" value="${agent.temperature !== undefined ? agent.temperature : 0.3}" step="0.1" min="0" max="1" />
           </div>
+        </div>
+
+        <div class="divider"></div>
+        <h3 class="h3">Capabilities / Tools</h3>
+        <div class="p small" style="margin-bottom: 10px;">Select features to empower your agent.</div>
+        <div class="grid-2">
+          <label style="display:flex;gap:8px;align-items:center;">
+            <input type="checkbox" name="tools" value="coldTransfer" ${(agent.tool_names || agent.selectedTools || []).includes('coldTransfer') ? 'checked' : ''}> Enable Cold Transfer
+          </label>
+          <label style="display:flex;gap:8px;align-items:center;">
+            <input type="checkbox" name="tools" value="warmTransfer" ${(agent.tool_names || agent.selectedTools || []).includes('warmTransfer') ? 'checked' : ''}> Enable Warm Transfer
+          </label>
         </div>
 
         <div class="divider"></div>
@@ -1572,7 +1701,13 @@ async function renderEditAgentForm(containerId, agentId) {
       payload.temperature = parseFloat(payload.temperature);
       payload.speed = parseFloat(payload.speed);
       payload.twilio_number_id = parseInt(payload.twilio_number_id) || 0;
-      payload.tool_names = agent.tool_names || agent.selectedTools || [];
+      payload.tool_names = Array.from(e.target.querySelectorAll('input[name="tools"]:checked')).map(el => el.value);
+      
+      // Handle Safe Customization fields (convert empty to null)
+      ['tone', 'greeting', 'always_ask', 'avoid_phrases'].forEach(k => {
+        if (!payload[k] || payload[k].trim() === "") payload[k] = null;
+        else payload[k] = payload[k].trim();
+      });
 
       await updateAgent(agentId, payload);
       alert("Agent updated successfully!");

@@ -32,46 +32,51 @@
 </div>
     <div>
 <h1 class="h2">Settings</h1>
-<div class="notice">Demo: changes save in LocalStorage. Production: version + audit log + role controls.</div>
+<div class="p" style="margin-bottom: 20px;">Manage your account-level configuration and global notifications.</div>
 <div class="divider"></div>
 <form class="form" id="settingsForm">
-  <label>Business name</label><input name="businessName"/>
+  <label>Business name</label><input name="business_name"/>
   <label>Industry</label><select name="industry">
     <option>Trades</option><option>Clinic</option><option>Property</option><option>Garage</option><option>Transport</option><option>Other</option>
   </select>
   <label>Mode</label>
   <select name="mode"><option value="overflow">Overflow</option><option value="always">24/7</option><option value="hybrid">Hybrid</option></select>
-  <label>Ring timeout (seconds)</label><input name="ringTimeout" type="number"/>
+  <label>Ring timeout (seconds)</label><input name="ring_timeout" type="number"/>
   <label>Timezone</label><input name="timezone"/>
   <label>Services</label><textarea name="services"></textarea>
   <label>Location</label><input name="location"/>
   <label>Business hours</label><input name="hours"/>
-  <label>Urgent keywords (comma separated)</label><input name="urgentKeywords"/>
-  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="transferEnabled"/> Enable urgent call transfer</label>
-  <label>Transfer number</label><input name="transferNumber" placeholder="+44..."/>
 
   <div class="divider"></div>
   <h3 class="h3">Notifications</h3>
-  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="smsEnabled"/> SMS enabled</label>
-  <input name="smsTo" placeholder="+44..."/>
-  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="emailEnabled"/> Email enabled</label>
-  <input name="emailTo" placeholder="you@company.com"/>
-  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="whatsappEnabled"/> WhatsApp enabled</label>
-  <input name="whatsappTo" placeholder="+44..."/>
+  <div class="p small" style="margin-bottom:15px">Configure where you receive critical alerts and call summaries.</div>
+  
+  <div class="card padded" style="background:var(--panel)">
+    <label style="display:flex;gap:8px;align-items:center; font-weight:600;"><input type="checkbox" name="sms_notifications_enabled"/> Enable SMS Alerts</label>
+    <div style="margin-top:10px">
+      <label class="small muted">SMS Target Number</label>
+      <input name="sms_to_number" placeholder="+1234567890" />
+    </div>
+  </div>
+
+  <div class="card padded" style="background:var(--panel); margin-top:15px">
+    <label style="display:flex;gap:8px;align-items:center; font-weight:600;"><input type="checkbox" name="email_notifications_enabled"/> Enable Email Alerts</label>
+    <div style="margin-top:10px">
+      <label class="small muted">Email Address</label>
+      <input name="email_to_address" placeholder="manager@example.com" type="email" />
+    </div>
+  </div>
+
+  <div class="card padded" style="background:var(--panel); margin-top:15px">
+    <label style="display:flex;gap:8px;align-items:center; font-weight:600;"><input type="checkbox" name="whatsapp_notifications_enabled"/> Enable WhatsApp Alerts</label>
+    <div style="margin-top:10px">
+      <label class="small muted">WhatsApp Number</label>
+      <input name="whatsapp_to_number" placeholder="+1234567890" />
+    </div>
+  </div>
 
   <div class="divider"></div>
-  <h3 class="h3">Safe customisation</h3>
-  <label>Tone</label><select name="tone"><option value="professional">Professional</option><option value="friendly">Friendly</option><option value="direct">Direct</option></select>
-  <label>Greeting</label><input name="greeting"/>
-  <label>Always ask (comma separated)</label><input name="alwaysAsk" placeholder="postcode, preferred time"/>
-  <label>Avoid phrases</label><input name="avoid" placeholder="discounts"/>
 
-  <div class="divider"></div>
-  <h3 class="h3">Advanced capabilities (plan-gated in production)</h3>
-  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="capQuoting"/> Enable structured quoting</label>
-  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="capBooking"/> Enable appointment booking</label>
-  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="capPayments"/> Enable payment links</label>
-  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="capDispatch"/> Enable dispatch</label>
 
   <button class="btn primary" type="submit">Save settings</button>
 </form>
