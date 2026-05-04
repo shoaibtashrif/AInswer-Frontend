@@ -1448,9 +1448,10 @@ async function renderCreateAgentForm(containerId) {
   (async () => {
     const kbSelect = document.getElementById("kbSelect");
     try {
-      const kbs = await getKBs();
-      if (kbs && kbs.length > 0) {
-        kbs.forEach(kb => {
+      const kbData = await getKBs();
+      const kbList = kbData.results || [];
+      if (kbList.length > 0) {
+        kbList.forEach(kb => {
           const opt = document.createElement("option");
           opt.value = kb.id;
           opt.textContent = kb.name;
@@ -1516,7 +1517,7 @@ async function renderCreateAgentForm(containerId) {
       payload.temperature = parseFloat(payload.temperature);
       payload.speed = parseFloat(payload.speed);
       payload.twilio_number_id = parseInt(payload.twilio_number_id) || 0;
-      payload.tool_names = Array.from(form.querySelectorAll('input[name="tools"]:checked')).map(el => el.value);
+      payload.tool_names = Array.from(e.target.querySelectorAll('input[name="tools"]:checked')).map(el => el.value);
       
       // Handle Safe Customization fields (convert empty to null)
       ['tone', 'greeting', 'always_ask', 'avoid_phrases'].forEach(k => {
@@ -1790,9 +1791,10 @@ async function renderEditAgentForm(containerId, agentId) {
   (async () => {
     const kbSelect = document.getElementById("editKbSelect");
     try {
-      const kbs = await getKBs();
-      if (kbs && kbs.length > 0) {
-        kbs.forEach(kb => {
+      const kbData = await getKBs();
+      const kbList = kbData.results || [];
+      if (kbList.length > 0) {
+        kbList.forEach(kb => {
           const opt = document.createElement("option");
           opt.value = kb.id;
           opt.textContent = kb.name;
