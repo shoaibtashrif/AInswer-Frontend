@@ -1377,7 +1377,15 @@ async function renderCreateAgentForm(containerId) {
       const voices = (resp && Array.isArray(resp.results)) ? resp.results : (Array.isArray(resp) ? resp : []);
 
       if (voices.length > 0) {
-        voiceSelect.innerHTML = voices.map(v => `<option value="${v.voiceId}">${v.languageLabel || v.primaryLanguage || 'Globe'} - ${v.name}</option>`).join('');
+        // Normalize field names — API may return snake_case or camelCase
+        voices.forEach(v => {
+          v.voiceId = v.voiceId || v.voice_id || v.id || '';
+          v.previewUrl = v.previewUrl || v.preview_url || v.sample_url || '';
+          v.name = v.name || v.voice_name || 'Unknown';
+          v.provider = v.provider || v.vendor || '';
+          v.languageLabel = v.languageLabel || v.language_label || v.language || '';
+        });
+        voiceSelect.innerHTML = voices.map(v => `<option value="${v.voiceId}">${v.languageLabel || 'Globe'} - ${v.name}</option>`).join('');
 
         // Setup listener to dynamically update the preview box
         voiceSelect.addEventListener('change', () => {
@@ -1516,6 +1524,14 @@ async function renderEditAgentForm(containerId, agentId) {
   }
 
   const voices = (voicesResp && Array.isArray(voicesResp.results)) ? voicesResp.results : (Array.isArray(voicesResp) ? voicesResp : []);
+  // Normalize field names — API may return snake_case or camelCase
+  voices.forEach(v => {
+    v.voiceId = v.voiceId || v.voice_id || v.id || '';
+    v.previewUrl = v.previewUrl || v.preview_url || v.sample_url || '';
+    v.name = v.name || v.voice_name || 'Unknown';
+    v.provider = v.provider || v.vendor || '';
+    v.languageLabel = v.languageLabel || v.language_label || v.language || '';
+  });
   // Support both property names for safety
   const safeSystemPrompt = agent.systemPrompt || agent.system_prompt || '';
 
