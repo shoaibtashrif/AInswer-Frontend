@@ -173,8 +173,21 @@ function handleRegister(formId) {
 
       const user = await resp.json();
 
+      // ── Auto-login: get a JWT so all API calls work immediately ──
+      const tokenParams = new URLSearchParams();
+      tokenParams.append("username", data.email);
+      tokenParams.append("password", data.password);
+      const tokenResp = await fetch(`${API_BASE}/token`, {
+        method: "POST",
+        body: tokenParams
+      });
+      if (!tokenResp.ok) throw new Error("Account created but login failed. Please log in manually.");
+      const tokenData = await tokenResp.json();
+
       // Clear ALL previous session data before writing new one
       clearSession();
+
+      LS.set("ainswer_token", tokenData.access_token);
 
       const newUser = {
         ...user,
