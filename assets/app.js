@@ -90,9 +90,16 @@ function saveCustomers(c) { LS.set("ainswer_customers", c); }
 function saveUsers(u) { LS.set("ainswer_users", u); }
 function saveCalls(c) { LS.set("ainswer_calls", c); }
 
+function clearSession() {
+  // Wipe every app-scoped key so no previous account's data bleeds through
+  const keys = Object.keys(localStorage).filter(k => k.startsWith("ainswer_"));
+  keys.forEach(k => localStorage.removeItem(k));
+  // Also clear sessionStorage
+  sessionStorage.clear();
+}
+
 function logout() {
-  LS.del("ainswer_session_user");
-  // Works from /app and /admin; from root, it will still go to index.html
+  clearSession();
   if (location.pathname.includes("/app/") || location.pathname.includes("/admin/")) location.href = "../index.html";
   else location.href = "index.html";
 }
@@ -166,6 +173,9 @@ function handleRegister(formId) {
 
       const user = await resp.json();
 
+      // Clear any previous account's data before writing new session
+      clearSession();
+      
       // For the demo UI to keep working, we seed a local customer entry
       const customerId = user.id;
       const customers = getCustomers();
@@ -239,6 +249,9 @@ function handleLogin(formId) {
       const tokenData = await resp.json();
       const token = tokenData.access_token;
       console.log("Login successful, token received.");
+      
+      // Clear any previous account's data before writing new session
+      clearSession();
       LS.set("ainswer_token", token);
 
       // Fetch user profile
