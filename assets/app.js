@@ -102,14 +102,13 @@ function clearSession() {
 
 function logout() {
   clearSession();
-  if (location.pathname.includes("/app/") || location.pathname.includes("/admin/")) location.href = "../index.html";
-  else location.href = "index.html";
+  location.href = "/";
 }
 function requireAuth(role = null) {
   const u = sessionUser();
-  if (!u) { location.href = (location.pathname.includes("/app/") || location.pathname.includes("/admin/")) ? "../login.html" : "login.html"; return null; }
+  if (!u) { location.href = "/login"; return null; }
   if (role && u.role !== role) {
-    location.href = (u.role === "admin") ? "../admin/index.html" : "../app/dashboard.html";
+    location.href = (u.role === "admin") ? "/admin/index" : "/app/dashboard";
     return null;
   }
   return u;
@@ -199,7 +198,7 @@ function handleRegister(formId) {
       };
 
       LS.set("ainswer_session_user", newUser);
-      location.href = "app/dashboard.html";
+      location.href = "/app/dashboard";
     } catch (e) {
       alert("Error: " + e.message);
     }
@@ -262,7 +261,7 @@ function handleLogin(formId) {
       };
 
       LS.set("ainswer_session_user", sessionUser);
-      location.href = (sessionUser.role === "admin") ? "admin/index.html" : "app/dashboard.html";
+      location.href = (sessionUser.role === "admin") ? "/admin/index" : "/app/dashboard";
     } catch (e) {
       alert("Error: " + e.message);
     }
@@ -597,7 +596,7 @@ function renderGoLive(containerId) {
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap">
           <button class="btn primary" onclick="simulateTestCall()">Run Test Call</button>
-          <a class="btn" href="calls.html">Call Logs</a>
+          <a class="btn" href="/calls">Call Logs</a>
         </div>
       </div>
       <div class="divider"></div>
@@ -755,7 +754,7 @@ function renderAdminCustomers(tableId) {
         <td>${escapeHtml(c.industry || "")}</td>
         <td><span class="badge ${c.status === "active" ? "ok" : c.status === "paused" ? "danger" : ""}">${escapeHtml(c.status || "")}</span></td>
         <td>${escapeHtml(c.mode || "")}</td>
-        <td><a class="btn" href="customer-detail.html?id=${c.id}">Manage</a></td>
+        <td><a class="btn" href="/customer-detail?id=${c.id}">Manage</a></td>
       </tr>`).join("")}
   `;
 }
@@ -778,7 +777,7 @@ function renderAdminCustomerDetail(containerId) {
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn" onclick="toggleCustomerStatus(${cust.id})">${cust.status === "active" ? "Pause" : "Activate"}</button>
-          <a class="btn" href="customers.html">Back</a>
+          <a class="btn" href="/customers">Back</a>
         </div>
       </div>
       <div class="divider"></div>
