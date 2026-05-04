@@ -1780,6 +1780,7 @@ async function handleReleaseNumber(agentId, containerId) {
 
 // expose
 window.AInswer = {
+  API_BASE,
   handleRegister, handleLogin, requireAuth, logout,
   setHeaderUser, setActiveNav, getDashboardData, getCallHistory, getCallDetail, copyToClipboard, viewCallDetail, toggleTranscript,
   renderCallsTable, renderCallDetail, renderSettings, renderGoLive, simulateTestCall, renderFAQs,
@@ -1788,6 +1789,7 @@ window.AInswer = {
   getGlobalNumbers, claimNumber, releaseNumber, handleReleaseNumber,
   getKBs, createKB, deleteKB, handleDeleteKB
 };
+
 
 
 // -----------------------------
