@@ -209,6 +209,8 @@
     }
   }, true);
 
+  // Clear any previous session the moment this page loads
+  if (typeof AInswer !== 'undefined') AInswer.clearSession();
   AInswer.handleRegister("registerForm");
 </script>
 </body>

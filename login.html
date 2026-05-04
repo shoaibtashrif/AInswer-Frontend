@@ -39,7 +39,12 @@
       </div>
     </div>
   </section>
-  <script> AInswer.handleLogin("loginForm"); </script>
+  <script>
+    // Clear any previous session the moment this page loads
+    // so switching accounts never leaks old data
+    if (typeof AInswer !== 'undefined') AInswer.clearSession();
+    AInswer.handleLogin("loginForm");
+  </script>
 
 </body>
 

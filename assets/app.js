@@ -173,43 +173,15 @@ function handleRegister(formId) {
 
       const user = await resp.json();
 
-      // Clear any previous account's data before writing new session
+      // Clear ALL previous session data before writing new one
       clearSession();
-      
-      // For the demo UI to keep working, we seed a local customer entry
-      const customerId = user.id;
-      const customers = getCustomers();
-      if (!customers.some(c => c.id === customerId)) {
-        customers.push({
-          id: customerId,
-          businessName: data.businessName || "New Business",
-          industry: data.industry || "Other",
-          mode: "overflow", ringTimeout: 20, timezone: data.timezone || "Europe/London",
-          services: "", location: "", hours: "",
-          urgentKeywords: [], transferEnabled: false, transferNumber: "",
-          forwardingNumber: "",
-          status: "onboarding",
-          notifications: { sms: true, smsTo: data.phone || "", email: true, emailTo: data.email, whatsapp: false, whatsappTo: "" },
-          fragments: { tone: "professional", greeting: `Thanks for calling ${data.businessName || "our business"}.`, alwaysAsk: [], avoid: "" },
-          faqs: [],
-          capabilities: { quoting: false, booking: false, payments: false, dispatch: false }
-        });
-        saveCustomers(customers);
-      }
 
       const newUser = {
         ...user,
         name: user.full_name,
         role: "customer",
-        customerId: customerId
+        customerId: user.id
       };
-
-      // Update local users list for legacy lookups if needed
-      const users = getUsers();
-      if (!users.some(u => u.email === user.email)) {
-        users.push(newUser);
-        saveUsers(users);
-      }
 
       LS.set("ainswer_session_user", newUser);
       location.href = "app/dashboard.html";
@@ -273,26 +245,6 @@ function handleLogin(formId) {
         role: user.email === "admin@ainswer.co" ? "admin" : "customer",
         customerId: user.id
       };
-
-      // Ensure a local customer exists for this user so the dashboard works
-      const customers = getCustomers();
-      if (!customers.some(c => c.id === user.id)) {
-        customers.push({
-          id: user.id,
-          businessName: user.business_name || "Business",
-          industry: user.industry || "Other",
-          mode: "overflow", ringTimeout: 20, timezone: user.timezone || "Europe/London",
-          services: "", location: "", hours: "",
-          urgentKeywords: [], transferEnabled: false, transferNumber: "",
-          forwardingNumber: "",
-          status: "active",
-          notifications: { sms: true, smsTo: user.mobile || "", email: true, emailTo: user.email, whatsapp: false, whatsappTo: "" },
-          fragments: { tone: "professional", greeting: `Thanks for calling ${user.business_name || "us"}.`, alwaysAsk: [], avoid: "" },
-          faqs: [],
-          capabilities: { quoting: false, booking: false, payments: false, dispatch: false }
-        });
-        saveCustomers(customers);
-      }
 
       LS.set("ainswer_session_user", sessionUser);
       location.href = (sessionUser.role === "admin") ? "admin/index.html" : "app/dashboard.html";
@@ -1841,7 +1793,8 @@ window.AInswer = {
   renderAdminCounts, renderAdminCustomers, renderAdminCustomerDetail,
   renderAgentsPage, renderAgentsTable, renderCreateAgentForm, renderEditAgentForm, startWebCall,
   getGlobalNumbers, claimNumber, releaseNumber, handleReleaseNumber,
-  getKBs, createKB, deleteKB, handleDeleteKB
+  getKBs, createKB, deleteKB, handleDeleteKB,
+  clearSession
 };
 
 
