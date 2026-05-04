@@ -642,16 +642,30 @@ function renderGoLive(containerId) {
 
 async function renderFAQs(containerId) {
   const el = document.getElementById(containerId); if (!el) return;
-  const kbs = await getKBs();
+  const kbData = await getKBs();
+  const kbs = kbData.results || [];
+  const canCreateKb = kbData.can_create_kb !== undefined ? kbData.can_create_kb : true;
+  const isEnterprise = kbData.is_enterprise === true;
+
+  const addBtnHtml = canCreateKb
+    ? `<button class="btn primary" onclick="document.getElementById('kbFormCard').scrollIntoView({behavior:'smooth'})">Add Knowledge Base</button>`
+    : `<button class="btn" disabled title="KB limit reached. Contact support to upgrade." style="opacity:0.5;cursor:not-allowed">🔒 Limit Reached</button>`;
+
+  const upgradeBanner = (!canCreateKb && !isEnterprise)
+    ? `<div style="background:#fef3c7;border:1px solid #f59e0b;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:13px">
+        🔒 You've used your 1 free knowledge base slot. <b>Contact support</b> to unlock unlimited KBs with an Enterprise plan.
+       </div>`
+    : '';
 
   el.innerHTML = `
     <div class="topbar">
       <div>
         <h1 class="h2" style="margin:0">Knowledge Base</h1>
-        <div class="p">Manage your data sources for AI agents (Max 2).</div>
+        <div class="p">Manage your data sources for AI agents.</div>
       </div>
-      <button class="btn primary" onclick="document.getElementById('kbFormCard').scrollIntoView({behavior:'smooth'})">Add Knowledge Base</button>
+      ${addBtnHtml}
     </div>
+    ${upgradeBanner}
 
     <div class="grid-2">
       ${kbs.map(kb => `
@@ -669,15 +683,16 @@ async function renderFAQs(containerId) {
         </div>
       `).join('')}
       
-      ${kbs.length < 2 ? `
+      ${kbs.length === 0 ? `
         <div class="card padded" style="border:2px dashed rgba(99,91,255,0.2); background:none; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:160px">
-          <div class="p muted">You have ${2 - kbs.length} slot(s) remaining.</div>
+          <div class="p muted">No knowledge bases yet.</div>
         </div>
       ` : ''}
     </div>
 
     <div class="divider"></div>
 
+    ${canCreateKb ? `
     <div class="card padded" id="kbFormCard">
       <h3 class="h3">Create New Knowledge Base</h3>
       <p class="p small">Provide text, URLs, or upload files (PDF/TXT/MD) to give your agents deep knowledge.</p>
@@ -699,6 +714,7 @@ async function renderFAQs(containerId) {
         </div>
       </form>
     </div>
+    ` : ''}
   `;
 
   const form = document.getElementById("kbForm");
@@ -887,6 +903,10 @@ async function createAgent(payload) {
       },
       body: JSON.stringify(payload)
     });
+    if (resp.status === 403) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || "Agent limit reached. Contact support to upgrade to an Enterprise plan.");
+    }
     if (!resp.ok) {
       const err = await resp.text();
       console.error("Create agent failed:", err);
@@ -1143,16 +1163,19 @@ async function releaseNumber(agentId) {
 
 async function getKBs() {
   const token = LS.get("ainswer_token");
-  if (!token) return [];
+  if (!token) return { results: [], can_create_kb: false, is_enterprise: false };
   try {
     const resp = await fetch(`${API_BASE}/api/knowledge-bases`, {
       headers: { "Authorization": `Bearer ${token}` }
     });
-    if (!resp.ok) return [];
-    return await resp.json();
+    if (!resp.ok) return { results: [], can_create_kb: false, is_enterprise: false };
+    const data = await resp.json();
+    // Support both old (array) and new (object) response shapes
+    if (Array.isArray(data)) return { results: data, can_create_kb: true, is_enterprise: false };
+    return data;
   } catch (e) {
     console.error(e);
-    return [];
+    return { results: [], can_create_kb: false, is_enterprise: false };
   }
 }
 
@@ -1182,7 +1205,10 @@ async function createKB(formData) {
       headers: { "Authorization": `Bearer ${token}` },
       body: formData
     });
-    if (resp.status === 400) throw new Error("Limit reached: Max 2 Knowledge Bases per account.");
+    if (resp.status === 403) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || "Knowledge Base limit reached. Contact support to upgrade to an Enterprise plan.");
+    }
     if (!resp.ok) throw new Error("Creation failed");
     return await resp.json();
   } catch (e) {
@@ -1203,6 +1229,18 @@ async function renderAgentsTable(containerId) {
 
   const resp = await getAgents();
   const agents = resp && resp.results ? resp.results : (Array.isArray(resp) ? resp : []);
+  const canCreate = resp && resp.can_create_agent !== undefined ? resp.can_create_agent : true;
+  const isEnterprise = resp && resp.is_enterprise === true;
+
+  const createBtnHtml = canCreate
+    ? `<button class="btn primary" onclick="AInswer.renderAgentsPage('${containerId}', 'create')">+ Create New Agent</button>`
+    : `<button class="btn" disabled title="You have reached your 1-agent limit. Contact support to upgrade." style="opacity:0.5;cursor:not-allowed">🔒 Limit Reached</button>`;
+
+  const upgradeBanner = (!canCreate && !isEnterprise)
+    ? `<div style="background:#fef3c7;border:1px solid #f59e0b;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:13px">
+        🔒 You've used your 1 free agent slot. <b>Contact support</b> to unlock unlimited agents with an Enterprise plan.
+       </div>`
+    : '';
 
   el.innerHTML = `
     <div class="topbar">
@@ -1210,8 +1248,9 @@ async function renderAgentsTable(containerId) {
         <h1 class="h2" style="margin:0">Manage Agents</h1>
         <div class="p">Configure your AI voice agents and their integrations.</div>
       </div>
-      <button class="btn primary" onclick="AInswer.renderAgentsPage('${containerId}', 'create')">+ Create New Agent</button>
+      ${createBtnHtml}
     </div>
+    ${upgradeBanner}
     <div class="card" style="overflow-x:auto">
       <table class="table" style="width:100%">
         <thead>
