@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Register • AInswer.co</title>
-  <link rel="stylesheet" href="assets/styles.css"/>
-  <script src="assets/app.js"></script>
+  <link rel="stylesheet" href="/assets/styles.css"/>
+  <script src="/assets/app.js"></script>
   <style>
     /* ── Password strength meter ── */
     .pw-rules { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
@@ -48,7 +48,7 @@
     <p class="sub">Get started with AInswer — your AI voice agent platform.</p>
     <div class="divider"></div>
     <div class="card padded">
-      <form class="form" id="registerForm">
+      <form class="form" id="registerForm" method="POST">
 
         <div class="row">
           <div><label>Your name</label><input name="name" required placeholder="Owner name"/></div>
@@ -210,8 +210,12 @@
   }, true);
 
   // Clear any previous session the moment this page loads
-  if (typeof AInswer !== 'undefined') AInswer.clearSession();
-  AInswer.handleRegister("registerForm");
+  if (window.AInswer && typeof window.AInswer.clearSession === 'function') {
+    window.AInswer.clearSession();
+  }
+  if (window.AInswer && typeof window.AInswer.handleRegister === 'function') {
+    window.AInswer.handleRegister("registerForm");
+  }
 </script>
 </body>
 </html>

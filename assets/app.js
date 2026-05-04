@@ -4,6 +4,8 @@
    - LocalStorage for: users, customers, calls
    - Functional: register/login, portal pages, admin pages, settings save, FAQ CRUD, simulated calls
 */
+window.AInswer = window.AInswer || {};
+
 const LS = {
   get: (k, d = null) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } },
   set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),

@@ -5,8 +5,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Login • AInswer.co</title>
-  <link rel="stylesheet" href="assets/styles.css" />
-  <script src="assets/app.js"></script>
+  <link rel="stylesheet" href="/assets/styles.css" />
+  <script src="/assets/app.js"></script>
 </head>
 
 <body>
@@ -29,7 +29,7 @@
       <p class="sub">Demo credentials: <b>owner@demo.com / demo123</b> or <b>admin@ainswer.co / admin123</b></p>
       <div class="divider"></div>
       <div class="card padded">
-        <form class="form" id="loginForm">
+        <form class="form" id="loginForm" method="POST">
           <label>Email</label><input name="email" />
           <label>Password</label><input name="password" required type="password" />
           <button class="btn primary" type="submit">Log in</button>
@@ -42,8 +42,12 @@
   <script>
     // Clear any previous session the moment this page loads
     // so switching accounts never leaks old data
-    if (typeof AInswer !== 'undefined') AInswer.clearSession();
-    AInswer.handleLogin("loginForm");
+    if (window.AInswer && typeof window.AInswer.clearSession === 'function') {
+      window.AInswer.clearSession();
+    }
+    if (window.AInswer && typeof window.AInswer.handleLogin === 'function') {
+      window.AInswer.handleLogin("loginForm");
+    }
   </script>
 
 </body>
