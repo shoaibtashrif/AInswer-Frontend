@@ -348,21 +348,25 @@ async function renderCallsTable(tableId, page = 1) {
       <th>Agent</th>
       <th>Status</th>
     </tr>
-    ${items.map(c => `
-      <tr class="clickable-row" onclick="AInswer.viewCallDetail('${c.callId || c.id}')">
+    ${items.map(c => {
+      const cid = c.callId || c.id || c.call_id || "—";
+      const time = c.created || c.time || c.created_at || "";
+      return `
+      <tr class="clickable-row" onclick="AInswer.viewCallDetail('${cid}')">
         <td onclick="event.stopPropagation()">
-          <span class="small code">${(c.callId || "—").slice(0, 8).toUpperCase()}...</span>
-          <button class="copy-btn" onclick="AInswer.copyToClipboard('${c.callId}', this)" title="Copy Full ID">
+          <span class="small code">${cid !== "—" ? cid.slice(0, 8).toUpperCase() + "..." : "—"}</span>
+          <button class="copy-btn" onclick="AInswer.copyToClipboard('${cid}', this)" title="Copy Full ID">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           </button>
         </td>
-        <td>${fmt(c.created || c.time)}</td>
-        <td>${c.fromNumber || "—"}</td>
-        <td>${c.toNumber || "—"}</td>
+        <td>${time ? fmt(time) : "—"}</td>
+        <td>${c.fromNumber || c.from_number || "—"}</td>
+        <td>${c.toNumber || c.to_number || "—"}</td>
         <td><span class="tag">${(c.direction || "web").toUpperCase()}</span></td>
-        <td>${c.agentName || "—"}</td>
+        <td>${c.agentName || c.agent_name || "—"}</td>
         <td><span class="tag ${c.status === 'ended' ? 'ok' : 'warn'}">${(c.status || "—").toUpperCase()}</span></td>
-      </tr>`).join("")}
+      </tr>`;
+    }).join("")}
   `;
 
   // Create pagination controls below the table
