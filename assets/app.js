@@ -1153,29 +1153,11 @@ async function getKBs() {
     });
     if (!resp.ok) return { results: [], can_create_kb: false, is_enterprise: false };
     const data = await resp.json();
-    // Support both old (array) and new (object) response shapes
     if (Array.isArray(data)) return { results: data, can_create_kb: true, is_enterprise: false };
     return data;
   } catch (e) {
     console.error(e);
     return { results: [], can_create_kb: false, is_enterprise: false };
-  }
-}
-
-async function deleteKB(kbId) {
-  const token = LS.get("ainswer_token");
-  if (!token) return;
-  if (!confirm("Delete this Knowledge Base? It will be removed from all agents.")) return;
-  try {
-    const resp = await fetch(`${API_BASE}/api/knowledge-bases/${kbId}`, {
-      method: "DELETE",
-      headers: { "Authorization": `Bearer ${token}` }
-    });
-    if (!resp.ok) throw new Error("Delete failed");
-    return true;
-  } catch (e) {
-    alert(e.message);
-    return false;
   }
 }
 
@@ -1198,6 +1180,114 @@ async function createKB(formData) {
     alert(e.message);
     return null;
   }
+}
+
+async function deleteKB(kbId) {
+  const token = LS.get("ainswer_token");
+  if (!token) return false;
+  try {
+    const resp = await fetch(`${API_BASE}/api/knowledge-bases/${kbId}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!resp.ok) throw new Error("Delete failed");
+    return true;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+}
+
+async function handleDeleteKB(kbId, containerId) {
+  if (!confirm("Are you sure you want to delete this knowledge base?")) return;
+  try {
+    const success = await deleteKB(kbId);
+    if (success) renderAgentsPage(containerId, 'knowledge');
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// TOOLS MANAGEMENT API
+// ─────────────────────────────────────────────────────────────
+
+async function getTools() {
+  const token = LS.get("ainswer_token");
+  if (!token) return { results: [] };
+  try {
+    const resp = await fetch(`${API_BASE}/api/tools`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!resp.ok) return { results: [] };
+    return await resp.json();
+  } catch (e) {
+    console.error(e);
+    return { results: [] };
+  }
+}
+
+async function getTool(name) {
+  const token = LS.get("ainswer_token");
+  if (!token) return null;
+  try {
+    const resp = await fetch(`${API_BASE}/api/tools/${name}`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
+}
+
+async function createTool(data) {
+  const token = LS.get("ainswer_token");
+  const resp = await fetch(`${API_BASE}/api/tools`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    body: JSON.stringify(data)
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ detail: "Failed to create tool" }));
+    throw new Error(err.detail || "Failed to create tool");
+  }
+  return await resp.json();
+}
+
+async function updateTool(name, data) {
+  const token = LS.get("ainswer_token");
+  const resp = await fetch(`${API_BASE}/api/tools/${name}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    body: JSON.stringify(data)
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ detail: "Failed to update tool" }));
+    throw new Error(err.detail || "Failed to update tool");
+  }
+  return await resp.json();
+}
+
+async function deleteTool(name) {
+  const token = LS.get("ainswer_token");
+  const resp = await fetch(`${API_BASE}/api/tools/${name}`, {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${token}` }
+  });
+  if (!resp.ok) throw new Error("Failed to delete tool");
+  return true;
+}
+
+async function testTool(name) {
+  const token = LS.get("ainswer_token");
+  const resp = await fetch(`${API_BASE}/api/tools/${name}/test`, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${token}` }
+  });
+  if (!resp.ok) throw new Error("Tool test failed");
+  return await resp.json().catch(() => ({ success: true }));
 }
 
 async function renderAgentsPage(containerId, view = 'list', agentId = null) {
@@ -1338,15 +1428,9 @@ async function renderCreateAgentForm(containerId) {
         </div>
 
         <div class="divider"></div>
-        <h3 class="h3">Capabilities / Tools</h3>
-        <div class="p small" style="margin-bottom: 10px;">Select features to empower your agent.</div>
-        <div class="grid-2">
-          <label style="display:flex;gap:8px;align-items:center;">
-            <input type="checkbox" name="tools" value="coldTransfer"> Enable Cold Transfer
-          </label>
-          <label style="display:flex;gap:8px;align-items:center;">
-            <input type="checkbox" name="tools" value="warmTransfer"> Enable Warm Transfer
-          </label>
+        <h3 class="h3">Custom Tools</h3>
+        <div id="customToolsContainer" class="grid-2">
+           <!-- Dynamic custom tools checkboxes -->
         </div>
 
         <div class="divider"></div>
@@ -1435,22 +1519,36 @@ async function renderCreateAgentForm(containerId) {
     }
   })();
 
-  // Start background loading of KBs
+  // Start background loading of KBs and Tools
   (async () => {
-    const kbSelect = document.getElementById("kbSelect");
     try {
-      const kbData = await getKBs();
-      const kbList = kbData.results || [];
-      if (kbList.length > 0) {
-        kbList.forEach(kb => {
+      // Populate Knowledge Bases
+      const kbSelect = document.getElementById("kbSelect");
+      const kbs = await getKBs();
+      if (kbs && kbs.results) {
+        kbs.results.forEach(kb => {
           const opt = document.createElement("option");
           opt.value = kb.id;
           opt.textContent = kb.name;
           kbSelect.appendChild(opt);
         });
       }
+
+      // Populate Custom Tools
+      const toolsContainer = document.getElementById("customToolsContainer");
+      const toolsData = await getTools();
+      if (toolsData && toolsData.results) {
+        toolsData.results.forEach(t => {
+          const div = document.createElement("label");
+          div.style.display = "flex";
+          div.style.gap = "8px";
+          div.style.alignItems = "center";
+          div.innerHTML = `<input type="checkbox" name="tools" value="${t.name}"> ${t.name}`;
+          toolsContainer.appendChild(div);
+        });
+      }
     } catch (err) {
-      console.error("Failed to load KBs:", err);
+      console.error("Failed to load KBs/Tools:", err);
     }
   })();
 
@@ -1628,15 +1726,9 @@ async function renderEditAgentForm(containerId, agentId) {
         </div>
 
         <div class="divider"></div>
-        <h3 class="h3">Capabilities / Tools</h3>
-        <div class="p small" style="margin-bottom: 10px;">Select features to empower your agent.</div>
-        <div class="grid-2">
-          <label style="display:flex;gap:8px;align-items:center;">
-            <input type="checkbox" name="tools" value="coldTransfer" ${(agent.tool_names || agent.selectedTools || []).includes('coldTransfer') ? 'checked' : ''}> Enable Cold Transfer
-          </label>
-          <label style="display:flex;gap:8px;align-items:center;">
-            <input type="checkbox" name="tools" value="warmTransfer" ${(agent.tool_names || agent.selectedTools || []).includes('warmTransfer') ? 'checked' : ''}> Enable Warm Transfer
-          </label>
+        <h3 class="h3">Custom Tools</h3>
+        <div id="editCustomToolsContainer" class="grid-2">
+           <!-- Dynamic custom tools checkboxes -->
         </div>
 
         <div class="divider"></div>
@@ -1719,7 +1811,7 @@ async function renderEditAgentForm(containerId, agentId) {
     payload.temperature = parseFloat(payload.temperature);
     payload.speed = parseFloat(payload.speed);
     payload.twilio_number_id = parseInt(payload.twilio_number_id) || 0;
-    payload.tool_names = agent.tool_names || agent.selectedTools || [];
+    payload.tool_names = Array.from(e.target.querySelectorAll('input[name="tools"]:checked')).map(el => el.value);
 
     try {
       const subBtn = e.target.querySelector('button');
@@ -1786,23 +1878,38 @@ async function renderEditAgentForm(containerId, agentId) {
     })();
   }
 
-  // Load KBs for edit form
+  // Background fetch for KBs and Tools
   (async () => {
-    const kbSelect = document.getElementById("editKbSelect");
     try {
-      const kbData = await getKBs();
-      const kbList = kbData.results || [];
-      if (kbList.length > 0) {
-        kbList.forEach(kb => {
+      const kbSelect = document.getElementById("editKbSelect");
+      const kbs = await getKBs();
+      if (kbs && kbs.results) {
+        kbs.results.forEach(kb => {
           const opt = document.createElement("option");
           opt.value = kb.id;
           opt.textContent = kb.name;
-          if (agent.knowledge_base_id === kb.id || agent.knowledgeBaseId === kb.id) opt.selected = true;
+          if (agent.knowledge_base_id === kb.id) opt.selected = true;
           kbSelect.appendChild(opt);
         });
       }
+
+      // Populate Custom Tools
+      const toolsContainer = document.getElementById("editCustomToolsContainer");
+      const toolsData = await getTools();
+      if (toolsData && toolsData.results) {
+        const selectedTools = agent.tool_names || agent.selectedTools || [];
+        toolsData.results.forEach(t => {
+          const div = document.createElement("label");
+          div.style.display = "flex";
+          div.style.gap = "8px";
+          div.style.alignItems = "center";
+          const checked = selectedTools.includes(t.name) ? 'checked' : '';
+          div.innerHTML = `<input type="checkbox" name="tools" value="${t.name}" ${checked}> ${t.name}`;
+          toolsContainer.appendChild(div);
+        });
+      }
     } catch (err) {
-      console.error("Failed to load KBs in Edit form:", err);
+      console.error("Failed to load KBs/Tools in Edit form:", err);
     }
   })();
 }
@@ -1818,6 +1925,279 @@ async function handleReleaseNumber(agentId, containerId) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+// TOOLS MANAGEMENT UI
+// ─────────────────────────────────────────────────────────────
+
+async function renderToolsPage(containerId, view = 'list', toolName = null) {
+  if (view === 'create') renderToolForm(containerId);
+  else if (view === 'edit' && toolName) renderToolForm(containerId, toolName);
+  else renderToolsTable(containerId);
+}
+
+async function renderToolsTable(containerId) {
+  const el = document.getElementById(containerId); if (!el) return;
+  el.innerHTML = `<div class="card padded"><div class="badge">Loading tools...</div></div>`;
+
+  const resp = await getTools();
+  const tools = resp && resp.results ? resp.results : [];
+
+  el.innerHTML = `
+    <div class="topbar">
+      <div>
+        <h1 class="h2" style="margin:0">Tool Management</h1>
+        <div class="p">Define HTTP webhooks that your AI agents can call during conversations.</div>
+      </div>
+      <button class="btn primary" onclick="AInswer.renderToolsPage('${containerId}', 'create')">+ Create New Tool</button>
+    </div>
+    
+    <div class="card" style="overflow-x:auto">
+      <table class="table" style="width:100%">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Method</th>
+            <th>Base URL</th>
+            <th>Ultravox ID</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tools.length === 0 ? '<tr><td colspan="6" style="text-align:center;padding:40px">No tools created yet.</td></tr>' : ''}
+          ${tools.map(t => `
+            <tr>
+              <td><b>${t.name}</b> ${t.is_builtin ? '<span class="badge small ok">Built-in</span>' : ''}</td>
+              <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${t.description}</td>
+              <td><span class="tag">${t.http_method || 'POST'}</span></td>
+              <td class="code small">${t.base_url || '—'}</td>
+              <td class="code small">${t.ultravox_tool_id || '—'}</td>
+              <td style="text-align:right">
+                <button class="btn small" onclick="AInswer.handleTestTool('${t.name}')">Test</button>
+                <button class="btn small" onclick="AInswer.renderToolsPage('${containerId}', 'edit', '${t.name}')">Edit</button>
+                <button class="btn small danger" onclick="AInswer.handleDeleteTool('${t.name}', '${containerId}')">Delete</button>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function renderToolForm(containerId, editName = null) {
+  const el = document.getElementById(containerId); if (!el) return;
+  let tool = null;
+  if (editName) {
+    el.innerHTML = `<div class="card padded"><div class="badge">Loading tool details...</div></div>`;
+    tool = await getTool(editName);
+    if (!tool) return alert("Tool not found");
+  }
+
+  const isEdit = !!editName;
+
+  el.innerHTML = `
+    <div class="topbar">
+      <h1 class="h2">${isEdit ? 'Edit Tool' : 'Create Tool'}</h1>
+      <button class="btn" onclick="AInswer.renderToolsPage('${containerId}')">Back to List</button>
+    </div>
+
+    <form id="toolForm" class="card padded shadow">
+      <div class="grid-2">
+        <div>
+          <label>Tool Name (ID) <span class="text-danger">*</span></label>
+          <input type="text" name="name" value="${tool ? tool.name : ''}" ${isEdit ? 'disabled' : ''} required placeholder="e.g. check-order-status" />
+          <div class="small muted">Unique identifier used in URLs.</div>
+        </div>
+        <div>
+          <label>Model Tool Name</label>
+          <input type="text" name="model_tool_name" value="${tool ? tool.model_tool_name || '' : ''}" placeholder="Defaults to name" />
+          <div class="small muted">The name the AI model actually sees.</div>
+        </div>
+      </div>
+
+      <div style="margin-top:15px">
+        <label>Description <span class="text-danger">*</span></label>
+        <textarea name="description" required placeholder="Tell the AI exactly when to use this tool and what it returns..." rows="3">${tool ? tool.description : ''}</textarea>
+      </div>
+
+      <div class="divider"></div>
+      <h3 class="h3">Webhook Configuration</h3>
+      
+      <div class="grid-2">
+        <div>
+          <label>Base URL</label>
+          <input type="url" name="base_url" value="${tool ? tool.base_url || '' : ''}" placeholder="https://api.yourcrm.com/v1/search" />
+        </div>
+        <div>
+          <label>HTTP Method</label>
+          <select name="http_method">
+            <option value="POST" ${tool && tool.http_method === 'POST' ? 'selected' : ''}>POST (Default)</option>
+            <option value="GET" ${tool && tool.http_method === 'GET' ? 'selected' : ''}>GET</option>
+            <option value="PUT" ${tool && tool.http_method === 'PUT' ? 'selected' : ''}>PUT</option>
+            <option value="PATCH" ${tool && tool.http_method === 'PATCH' ? 'selected' : ''}>PATCH</option>
+            <option value="DELETE" ${tool && tool.http_method === 'DELETE' ? 'selected' : ''}>DELETE</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <h3 class="h3">Parameters</h3>
+      <div id="paramContainer">
+        <!-- Dynamic params added here -->
+      </div>
+      <button type="button" class="btn small" onclick="addParamRow()">+ Add Dynamic Parameter</button>
+      <div class="small muted" style="margin-top:5px">Parameters the AI will fill in based on the conversation.</div>
+
+      <div class="divider"></div>
+      <h3 class="h3">Authentication (Optional)</h3>
+      <div class="grid-2">
+        <div>
+          <label>Auth Type</label>
+          <select name="auth_type" onchange="toggleAuthFields(this.value)">
+            <option value="none" ${tool && (!tool.authentication || tool.authentication.type === 'none') ? 'selected' : ''}>None</option>
+            <option value="api_key" ${tool && tool.authentication && tool.authentication.type === 'api_key' ? 'selected' : ''}>API Key (Header)</option>
+            <option value="bearer" ${tool && tool.authentication && tool.authentication.type === 'bearer' ? 'selected' : ''}>Bearer Token</option>
+            <option value="basic" ${tool && tool.authentication && tool.authentication.type === 'basic' ? 'selected' : ''}>Basic Auth</option>
+          </select>
+        </div>
+        <div id="authFields">
+          <!-- Dynamic auth fields -->
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div style="display:flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn" onclick="AInswer.renderToolsPage('${containerId}')">Cancel</button>
+        <button type="submit" class="btn primary">${isEdit ? 'Update Tool' : 'Create Tool'}</button>
+      </div>
+    </form>
+  `;
+
+  // Helper: Auth fields
+  window.toggleAuthFields = (type) => {
+    const div = document.getElementById("authFields");
+    if (type === 'api_key') {
+      div.innerHTML = `
+        <label>Header Name</label>
+        <input type="text" name="auth_header" value="${tool && tool.authentication ? tool.authentication.header_name || 'X-API-Key' : 'X-API-Key'}" />
+        <label>API Key</label>
+        <input type="password" name="auth_key" value="${tool && tool.authentication ? tool.authentication.api_key || '' : ''}" />
+      `;
+    } else if (type === 'bearer') {
+      div.innerHTML = `
+        <label>Token</label>
+        <input type="password" name="auth_token" value="${tool && tool.authentication ? tool.authentication.token || '' : ''}" />
+      `;
+    } else if (type === 'basic') {
+      div.innerHTML = `
+        <label>Username</label>
+        <input type="text" name="auth_user" value="${tool && tool.authentication ? tool.authentication.username || '' : ''}" />
+        <label>Password</label>
+        <input type="password" name="auth_pass" value="${tool && tool.authentication ? tool.authentication.password || '' : ''}" />
+      `;
+    } else {
+      div.innerHTML = "";
+    }
+  };
+
+  // Helper: Parameter rows
+  window.addParamRow = (data = null) => {
+    const container = document.getElementById("paramContainer");
+    const row = document.createElement("div");
+    row.className = "grid-4 param-row";
+    row.style.marginBottom = "10px";
+    row.innerHTML = `
+      <input type="text" name="p_name" placeholder="Param Name" value="${data ? data.name : ''}" required />
+      <select name="p_location">
+        <option value="PARAMETER_LOCATION_BODY" ${data && data.location === 'PARAMETER_LOCATION_BODY' ? 'selected' : ''}>Body (JSON)</option>
+        <option value="PARAMETER_LOCATION_QUERY" ${data && data.location === 'PARAMETER_LOCATION_QUERY' ? 'selected' : ''}>Query Param</option>
+        <option value="PARAMETER_LOCATION_HEADER" ${data && data.location === 'PARAMETER_LOCATION_HEADER' ? 'selected' : ''}>Header</option>
+        <option value="PARAMETER_LOCATION_PATH" ${data && data.location === 'PARAMETER_LOCATION_PATH' ? 'selected' : ''}>Path</option>
+      </select>
+      <input type="text" name="p_desc" placeholder="AI Description" value="${data && data.schema ? data.schema.description : ''}" />
+      <div style="display:flex;gap:5px">
+        <label style="font-size:11px"><input type="checkbox" name="p_req" ${data && data.required ? 'checked' : ''} /> Req</label>
+        <button type="button" class="btn small danger" onclick="this.parentElement.parentElement.remove()">×</button>
+      </div>
+    `;
+    container.appendChild(row);
+  };
+
+  // Initial populate
+  if (tool && tool.authentication) toggleAuthFields(tool.authentication.type);
+  if (tool && tool.parameters) tool.parameters.forEach(p => addParamRow(p));
+  else if (!isEdit) addParamRow(); // Add one empty row for new tools
+
+  // Submit handler
+  document.getElementById("toolForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    
+    // Auth object
+    let authentication = null;
+    const authType = fd.get("auth_type");
+    if (authType === 'api_key') authentication = { type: 'api_key', header_name: fd.get("auth_header"), api_key: fd.get("auth_key") };
+    else if (authType === 'bearer') authentication = { type: 'bearer', token: fd.get("auth_token") };
+    else if (authType === 'basic') authentication = { type: 'basic', username: fd.get("auth_user"), password: fd.get("auth_pass") };
+
+    // Parameters
+    const parameters = [];
+    const pNames = fd.getAll("p_name");
+    const pLocs = fd.getAll("p_location");
+    const pDescs = fd.getAll("p_desc");
+    const pRows = e.target.querySelectorAll(".param-row");
+    
+    pNames.forEach((name, i) => {
+      if (!name) return;
+      const isReq = pRows[i].querySelector('input[name="p_req"]').checked;
+      parameters.push({
+        name: name,
+        location: pLocs[i],
+        schema: { type: "string", description: pDescs[i] || `Value for ${name}` },
+        required: isReq
+      });
+    });
+
+    const payload = {
+      name: fd.get("name"),
+      description: fd.get("description"),
+      model_tool_name: fd.get("model_tool_name") || fd.get("name"),
+      base_url: fd.get("base_url"),
+      http_method: fd.get("http_method"),
+      parameters,
+      authentication
+    };
+
+    try {
+      if (isEdit) await updateTool(editName, payload);
+      else await createTool(payload);
+      AInswer.renderToolsPage(containerId);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+}
+
+async function handleDeleteTool(name, containerId) {
+  if (!confirm(`Are you sure you want to delete the tool "${name}"?`)) return;
+  try {
+    await deleteTool(name);
+    renderToolsTable(containerId);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function handleTestTool(name) {
+  try {
+    const res = await testTool(name);
+    alert("Test Result: " + JSON.stringify(res, null, 2));
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
 // expose
 window.AInswer = {
   API_BASE,
@@ -1828,6 +2208,8 @@ window.AInswer = {
   renderAgentsPage, renderAgentsTable, renderCreateAgentForm, renderEditAgentForm, startWebCall,
   getGlobalNumbers, claimNumber, releaseNumber, handleReleaseNumber,
   getKBs, createKB, deleteKB, handleDeleteKB,
+  getTools, getTool, createTool, updateTool, deleteTool, testTool,
+  renderToolsPage, renderToolsTable, renderToolForm, handleDeleteTool, handleTestTool,
   clearSession
 };
 
